@@ -6,67 +6,68 @@
     "group": "vault.operators.onewealthplace.com",
     "names": {
       "shortNames": [
-        "vcert"
+        "vauth"
       ],
-      "kind": "VaultCertificate",
-      "plural": "vaultcertificates",
-      "singular": "vaultcertificate"
+      "kind": "VaultAuthEngine",
+      "plural": "vaultauthengines",
+      "singular": "vaultauthengine"
     },
     "validation": {
       "openAPIV3Schema": {
         "properties": {
           "spec": {
             "properties": {
-              "secretName": {
-                "type": "string"
-              },
               "path": {
                 "type": "string"
               },
-              "generate": {
+              "description": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object",
+                "properties": {}
+              },
+              "pluginName": {
+                "type": "string"
+              },
+              "local": {
+                "type": "boolean"
+              },
+              "config": {
                 "type": "object",
                 "properties": {
-                  "role": {
+                  "defaultLeaseTtl": {
                     "type": "string"
                   },
-                  "commonName": {
+                  "maxLeaseTtl": {
                     "type": "string"
                   },
-                  "altNames": {
+                  "pluginName": {
+                    "type": "string"
+                  },
+                  "auditNonHmacRequestKeys": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   },
-                  "ipSans": {
+                  "auditNonHmacResponseKeys": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   },
-                  "uriSans": {
+                  "listingVisibility": {
+                    "type": "string"
+                  },
+                  "passthroughRequestHeaders": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
-                  },
-                  "otherSans": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "ttl": {
-                    "type": "string"
-                  },
-                  "format": {
-                    "type": "string"
-                  },
-                  "privateKeyFormat": {
-                    "type": "string"
-                  },
-                  "excludeCnDFromSans": {
-                    "type": "boolean"
                   }
                 }
               }
@@ -78,6 +79,6 @@
   },
   "apiVersion": "apiextensions.k8s.io/v1beta1",
   "metadata": {
-    "name": "vaultcertificates.vault.operators.onewealthplace.com"
+    "name": "vaultauthengines.vault.operators.onewealthplace.com"
   }
 }

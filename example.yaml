@@ -13,6 +13,14 @@ spec:
         - update
 ---
 apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultAuthEngine
+metadata:
+  name: example
+spec:
+  path: cert
+  type: cert
+---
+apiVersion: vault.operators.onewealthplace.com/v1
 kind: VaultSecretEngine
 metadata:
   name: example
@@ -156,6 +164,25 @@ metadata:
 spec:
   path: example_intermediate
   secretName: testcert
+  auth:
+    accessorPath: cert
   generate:
     role: examplerole
     commonName: cert.example.com
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultEntity
+metadata:
+  name: example-entity
+spec:
+  name: example
+  metadata:
+    clientId: OWP
+    roles: ADMIN
+  policies:
+    - ops
+  aliases:
+    - name: cert
+      accessorPath: cert
+      metadata:
+        test: huhu

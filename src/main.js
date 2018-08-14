@@ -3,6 +3,7 @@ const K8SHelper = require("./k8sHelper");
 const vaultPolicyCrd = require('./crds/vaultPolicy.crd.json');
 const vaultCertificateCrd = require("./crds/vaultCertificate.crd.json");
 const vaultSecretEngineCrd = require("./crds/vaultSecretEngine.crd.json");
+const vaultAuthEngineCrd = require("./crds/vaultAuthEngine.crd.json");
 const vaultRootCertificateCrd = require("./crds/vaultRootCertificate.crd.json");
 const vaultIntermediateCertificateCrd = require("./crds/vaultIntermediateCertificate.crd.json");
 
@@ -18,6 +19,7 @@ async function main() {
         await kubernetesHelper.createCrd(vaultPolicyCrd);
         await kubernetesHelper.createCrd(vaultCertificateCrd);
         await kubernetesHelper.createCrd(vaultSecretEngineCrd);
+        await kubernetesHelper.createCrd(vaultAuthEngineCrd);
         await kubernetesHelper.createCrd(vaultRootCertificateCrd);
         await kubernetesHelper.createCrd(vaultIntermediateCertificateCrd);
 
@@ -27,6 +29,14 @@ async function main() {
             (obj) => vaultHelper.applyPolicy(obj),
             (obj) => vaultHelper.applyPolicy(obj),
             (obj) => vaultHelper.deletePolicy(obj)
+        );
+
+        kubernetesHelper.watchCRD(
+            'vault.operators.onewealthplace.com',
+            'vaultauthengines',
+            (obj) => vaultHelper.applyAuthEngine(obj),
+            (obj) => vaultHelper.applyAuthEngine(obj),
+            (obj) => vaultHelper.disableAuthEngine(obj)
         );
 
         kubernetesHelper.watchCRD(

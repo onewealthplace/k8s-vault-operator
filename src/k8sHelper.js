@@ -19,12 +19,16 @@ class KubernetesHelper {
 
         console.log(`Watch on ${group}.${kind}`);
         jsonStream.on('data', async event => {
-            if (event.type === 'ADDED') {
-                await onCreate(event.object);
-            } else if (event.type === 'DELETED') {
-                await onDelete(event.object);
-            } else if (event.type === 'MODIFIED') {
-                await onUpdate(event.object);
+            try {
+                if (event.type === 'ADDED') {
+                    await onCreate(event.object);
+                } else if (event.type === 'DELETED') {
+                    await onDelete(event.object);
+                } else if (event.type === 'MODIFIED') {
+                    await onUpdate(event.object);
+                }
+            } catch (err) {
+                console.error(err)
             }
         });
         jsonStream.on('end', () => {
