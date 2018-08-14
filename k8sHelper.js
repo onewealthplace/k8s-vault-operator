@@ -17,18 +17,21 @@ class KubernetesHelper {
         const jsonStream = new JSONStream();
         stream.pipe(jsonStream);
 
+        console.log(`Watch on ${group}.${kind}`);
         jsonStream.on('data', async event => {
-            const id = `${ event.object.metadata.namespace }/${ event.object.metadata.name }`;
             if (event.type === 'ADDED') {
                 await onCreate(event.object);
-                console.log(`${group}.${kind} ${id} added`);
             } else if (event.type === 'DELETED') {
                 await onDelete(event.object);
-                console.log(`${group}.${kind} ${id} deleted`);
             } else if (event.type === 'MODIFIED') {
                 await onUpdate(event.object);
-                console.log(`${group}.${kind} ${id} updated`);
             }
+        });
+        jsonStream.on('end', () => {
+            this.watchCRD(group, kind, onCreate, onUpdate, onDelete)
+        });
+        jsonStream.on('error', () => {
+            this.watchCRD(group, kind, onCreate, onUpdate, onDelete)
         });
     }
 
@@ -61,7 +64,11 @@ class KubernetesHelper {
                 },
                 data
             }};
-        return this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload)
+        try {
+            return await this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload)
+        } catch (_) {
+            return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).patch(payload)
+        }
     }
 }
 

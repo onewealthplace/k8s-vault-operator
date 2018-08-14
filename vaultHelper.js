@@ -69,69 +69,81 @@ class VaultHelper {
             listingVisibility,
             passthroughRequestHeaders
         } = config;
-        return this.vaultClient.mount({
-            mount_point: path,
-            type,
-            description,
-            config: {
-                default_lease_ttl: defaultLeaseTtl,
-                max_lease_ttl: maxLeaseTtl,
-                force_no_cache: forceNoCache,
-                plugin_name: pluginName,
-                audit_non_hmac_request_keys: (auditNonHmacRequestKeys || []).concat(','),
-                audit_non_hmac_response_keys: (auditNonHmacResponseKeys || []).concat(','),
-                listing_visibility: listingVisibility,
-                passthrough_request_headers: (passthroughRequestHeaders || []).concat(',')
-            },
-            options,
-            plugin_name: secretEngine.spec.pluginName,
-            local,
-            seal_wrap: sealWrap
-        }).catch(() => console.log(`Secret Engine ${secretEngine.metadata.name}, path ${path} already exist`))
+        return this.vaultClient.mounts().then((mounts) => {
+           if (!mounts[`${path}/`]) {
+               return this.vaultClient.mount({
+                   mount_point: path,
+                   type,
+                   description,
+                   config: {
+                       default_lease_ttl: defaultLeaseTtl,
+                       max_lease_ttl: maxLeaseTtl,
+                       force_no_cache: forceNoCache,
+                       plugin_name: pluginName,
+                       audit_non_hmac_request_keys: (auditNonHmacRequestKeys || []).concat(','),
+                       audit_non_hmac_response_keys: (auditNonHmacResponseKeys || []).concat(','),
+                       listing_visibility: listingVisibility,
+                       passthrough_request_headers: (passthroughRequestHeaders || []).concat(',')
+                   },
+                   options,
+                   plugin_name: secretEngine.spec.pluginName,
+                   local,
+                   seal_wrap: sealWrap
+               })
+           }
+        });
     }
 
     applyRootCa(cert) {
         let {pemBundle, generate} = cert.spec;
-        if (pemBundle) {
-            return this.vaultClient.write(`${cert.spec.path}/config/ca`, {
-                pem_bundle: pemBundle
-            });
-        } else if (generate) {
-            return this.generateRootCa(cert, generate);
-        }
+        return this.vaultClient.list(`${cert.spec.path}/certs`).then((certs) => {
+            if (certs.data.keys.length === 0) {
+                if (pemBundle) {
+                    return this.vaultClient.write(`${cert.spec.path}/config/ca`, {
+                        pem_bundle: pemBundle
+                    });
+                } else if (generate) {
+                    return this.generateRootCa(cert, generate);
+                }
+            }
+        });
     }
 
     applyIntermediateCa(cert) {
         let {certificate, generate} = cert.spec;
-        if (certificate) {
-            return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {
-                certificate
-            });
-        } else if (generate) {
-            let commonName = generate.commonName;
-            return this.generateIntermediateCa(cert, generate)
-                .then((generated) => {
-                    if (generated) {
-                        let csr = generated.data.csr;
-                        if (csr) {
-                            console.log(`Certificate for ${commonName} generated`);
-                            return this.signIntermediate(cert, csr).then((intermediateCert) => {
-                                let certificate = intermediateCert.data.certificate;
-                                if (certificate) {
-                                    console.log(`Certificate for ${commonName} signed with root certificate`);
-                                    return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, { certificate })
+        return this.vaultClient.list(`${cert.spec.path}/certs`).then((certs) => {
+            if (certs.data.keys.length === 0) {
+                if (certificate) {
+                    return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {
+                        certificate
+                    });
+                } else if (generate) {
+                    let commonName = generate.commonName;
+                    return this.generateIntermediateCa(cert, generate)
+                        .then((generated) => {
+                            if (generated) {
+                                let csr = generated.data.csr;
+                                if (csr) {
+                                    console.log(`Certificate for ${commonName} generated`);
+                                    return this.signIntermediate(cert, csr).then((intermediateCert) => {
+                                        let certificate = intermediateCert.data.certificate;
+                                        if (certificate) {
+                                            console.log(`Certificate for ${commonName} signed with root certificate`);
+                                            return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, { certificate })
+                                        } else {
+                                            console.log(`Unable to sign certificate for ${commonName} with root certificate`);
+                                        }
+                                    })
                                 } else {
-                                    console.log(`Unable to sign certificate for ${commonName} with root certificate`);
+                                    console.log(`Unable to generate certificate for ${commonName}`)
                                 }
-                            })
-                        } else {
-                            console.log(`Unable to generate certificate for ${commonName}`)
-                        }
-                    } else {
-                        console.log(`Certificate already exists for ${commonName}`)
-                    }
-                });
-        }
+                            } else {
+                                console.log(`Certificate already exists for ${commonName}`)
+                            }
+                        });
+                }
+            }
+        });
     }
 
     recordSerial(path, namespace, name, serialNumber, revoked) {
@@ -141,33 +153,36 @@ class VaultHelper {
     applyCa(cert, onGenerated) {
         let {secretName, generate} = cert.spec;
         let commonName = generate.commonName;
-        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${cert.metadata.namespace || "default"}/${cert.metadata.name}`).catch(() => {
-            return this.generateCertificate(cert, generate)
-                .then((generated) => {
-                    if (generated) {
-                        let {certificate, ca_chain, private_key, serial_number} = generated.data;
-                        if (certificate) {
-                            console.log(`Certificate for ${commonName} generated`);
-                            return this.recordSerial(cert.spec.path, cert.metadata.namespace || "default", cert.metadata.name, serial_number, false)
-                                .then(() => onGenerated(secretName, cert.metadata.namespace || "default", ca_chain.join('\n'), certificate, private_key));
-                        } else {
-                            console.log(`Unable to generate certificate for ${commonName}`)
-                        }
-                    } else {
-                        console.log(`Certificate already exists for ${commonName}`)
-                    }
-                })
-        })
+        let namespace = cert.metadata.namespace || "default";
+        let effectivelyGenerateCa = () => this.generateCertificate(cert, generate)
+            .then((generated) => {
+                let {certificate, ca_chain, private_key, serial_number} = generated.data;
+                if (certificate) {
+                    console.log(`Certificate for ${namespace}/${cert.metadata.name} generated`);
+                    return this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial_number, false)
+                        .then(() => onGenerated(secretName, namespace, ca_chain.join('\n'), certificate, private_key));
+                } else {
+                    console.log(`Unable to generate certificate for ${namespace}/${cert.metadata.name}`)
+                }
+            });
+        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
+            .then((serial) => {
+                if (serial.data.data.revoked) {
+                    effectivelyGenerateCa()
+                }
+            })
+            .catch(() => effectivelyGenerateCa())
     }
 
     revokeCa(cert) {
         let namespace = cert.metadata.namespace || "default";
         return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`).then((serial) => {
-            if (serial.data.revoked) {
+            if (serial.data.data.revoked) {
                 console.log("Certificate already revoked")
             } else {
-                return this.vaultClient.write(`${cert.spec.path}/revoke`, {serial_number: serial.data.serialNumber})
-                    .then(() => this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial.data.serialNumber, true))
+                return this.vaultClient.write(`${cert.spec.path}/revoke`, {serial_number: serial.data.data.serialNumber})
+                    .then(() => this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial.data.data.serialNumber, true))
+                    .then(() => console.log(`Certificate ${namespace}/${cert.metadata.name} revoked`))
             }
         });
     }
@@ -244,36 +259,32 @@ class VaultHelper {
             streetAddress,
             postalCode
         } = generate;
-        return this.vaultClient.list(`${cert.spec.path}/certs`).then((certs) => {
-            if (certs.data.keys.length === 0) {
-                return this.vaultClient.write(`${cert.spec.path}/root/generate/${type}`, {
-                    common_name: commonName,
-                    alt_names: (altNames || []).join(','),
-                    ip_sans: (ipSans || []).join(','),
-                    uri_sans: (uriSans || []).join(','),
-                    other_sans: (otherSans || []).join(','),
-                    ttl,
-                    format,
-                    private_key_format: privateKeyFormat,
-                    key_type: keyType,
-                    key_bits: keyBits,
-                    max_path_length: maxPathLength,
-                    exclude_cn_from_sans: excludeCnFromSans,
-                    permitted_dns_domains: permittedDnsDomains,
-                    ou,
-                    organization,
-                    country,
-                    locality,
-                    province,
-                    street_address: streetAddress,
-                    postal_code: postalCode
-                }).then((generated) => {
-                    if (generated.data.certificate) {
-                        console.log(`Certificate for ${commonName} generated`)
-                    } else {
-                        console.log(`Unable to generate certificate for ${commonName}`)
-                    }
-                })
+        return this.vaultClient.write(`${cert.spec.path}/root/generate/${type}`, {
+            common_name: commonName,
+            alt_names: (altNames || []).join(','),
+            ip_sans: (ipSans || []).join(','),
+            uri_sans: (uriSans || []).join(','),
+            other_sans: (otherSans || []).join(','),
+            ttl,
+            format,
+            private_key_format: privateKeyFormat,
+            key_type: keyType,
+            key_bits: keyBits,
+            max_path_length: maxPathLength,
+            exclude_cn_from_sans: excludeCnFromSans,
+            permitted_dns_domains: permittedDnsDomains,
+            ou,
+            organization,
+            country,
+            locality,
+            province,
+            street_address: streetAddress,
+            postal_code: postalCode
+        }).then((generated) => {
+            if (generated.data.certificate) {
+                console.log(`Certificate for ${commonName} generated`)
+            } else {
+                console.log(`Unable to generate certificate for ${commonName}`)
             }
         })
     }
@@ -299,28 +310,24 @@ class VaultHelper {
             streetAddress,
             postalCode
         } = generate;
-        return this.vaultClient.list(`${cert.spec.path}/certs`).then((certs) => {
-            if (certs.data.keys.length === 0) {
-                return this.vaultClient.write(`${cert.spec.path}/intermediate/generate/${type}`, {
-                    common_name: commonName,
-                    alt_names: (altNames || []).join(','),
-                    ip_sans: (ipSans || []).join(','),
-                    uri_sans: (uriSans || []).join(','),
-                    other_sans: (otherSans || []).join(','),
-                    format,
-                    private_key_format: privateKeyFormat,
-                    key_type: keyType,
-                    key_bits: keyBits,
-                    exclude_cn_from_sans: excludeCnFromSans,
-                    ou,
-                    organization,
-                    country,
-                    locality,
-                    province,
-                    street_address: streetAddress,
-                    postal_code: postalCode
-                })
-            }
+        return this.vaultClient.write(`${cert.spec.path}/intermediate/generate/${type}`, {
+            common_name: commonName,
+            alt_names: (altNames || []).join(','),
+            ip_sans: (ipSans || []).join(','),
+            uri_sans: (uriSans || []).join(','),
+            other_sans: (otherSans || []).join(','),
+            format,
+            private_key_format: privateKeyFormat,
+            key_type: keyType,
+            key_bits: keyBits,
+            exclude_cn_from_sans: excludeCnFromSans,
+            ou,
+            organization,
+            country,
+            locality,
+            province,
+            street_address: streetAddress,
+            postal_code: postalCode
         })
     }
 
