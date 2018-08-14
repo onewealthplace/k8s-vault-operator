@@ -6,7 +6,7 @@
     "group": "vault.operators.onewealthplace.com",
     "names": {
       "shortNames": [
-        "vp"
+        "vpolicy"
       ],
       "kind": "VaultPolicy",
       "plural": "vaultpolicies",

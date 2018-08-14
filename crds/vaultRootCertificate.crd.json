@@ -1,0 +1,140 @@
+{
+  "kind": "CustomResourceDefinition",
+  "spec": {
+    "scope": "Namespaced",
+    "version": "v1",
+    "group": "vault.operators.onewealthplace.com",
+    "names": {
+      "shortNames": [
+        "vrootcert"
+      ],
+      "kind": "VaultRootCertificate",
+      "plural": "vaultrootcertificates",
+      "singular": "vaultrootcertificate"
+    },
+    "validation": {
+      "openAPIV3Schema": {
+        "properties": {
+          "spec": {
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "pemBundle": {
+                "type": "string"
+              },
+              "generate": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "commonName": {
+                    "type": "string"
+                  },
+                  "altNames": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ipSans": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "uriSans": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "otherSans": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ttl": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "privateKeyFormat": {
+                    "type": "string"
+                  },
+                  "keyType": {
+                    "type": "string"
+                  },
+                  "keyBits": {
+                    "type": "integer"
+                  },
+                  "maxPathLength": {
+                    "type": "integer"
+                  },
+                  "excludeCnFromSans": {
+                    "type": "boolean"
+                  },
+                  "permittedDnsDomains": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ou": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "organization": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "country": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "locality": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "province": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "streetAddress": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "postalCode": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "apiVersion": "apiextensions.k8s.io/v1beta1",
+  "metadata": {
+    "name": "vaultrootcertificates.vault.operators.onewealthplace.com"
+  }
+}

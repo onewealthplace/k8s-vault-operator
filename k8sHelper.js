@@ -32,7 +32,7 @@ class KubernetesHelper {
         });
     }
 
-    async createCRDs(crd) {
+    async createCrd(crd) {
 //
         // Create the CRD with the Kubernetes API
         //

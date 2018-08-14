@@ -1,13 +1,150 @@
 apiVersion: vault.operators.onewealthplace.com/v1
 kind: VaultPolicy
 metadata:
-  name: test-policy
+  name: example-policy
 spec:
-  name: test
+  name: example
   rules:
-    - path: secret/data/test
+    - path: secret/data/example
       capabilities:
         - read
     - path: secret/data/huhu
       capabilities:
         - update
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultSecretEngine
+metadata:
+  name: example
+spec:
+  path: example
+  type: pki
+  config:
+    maxLeaseTtl: 87600h
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultSecretEngine
+metadata:
+  name: example-intermediate
+spec:
+  path: example_intermediate
+  type: pki
+  config:
+    maxLeaseTtl: 26280h
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultRootCertificate
+metadata:
+  name: example-root
+spec:
+  path: example
+  pemBundle: |
+    -----BEGIN RSA PRIVATE KEY-----
+    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
+    -----END RSA PRIVATE KEY-----
+    -----BEGIN CERTIFICATE-----
+    MIIFjDCCA3SgAwIBAgIJAIcJF7JB1a+lMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNV
+    BAYTAkZSMQ4wDAYDVQQHDAVQYXJpczEOMAwGA1UECAwFUGFyaXMxFzAVBgNVBAoM
+    Dk9uZVdlYWx0aFBsYWNlMQswCQYDVQQDDAJjYTAeFw0xODA3MDExODE0MzJaFw0z
+    ODA2MjYxODE0MzJaMFMxCzAJBgNVBAYTAkZSMQ4wDAYDVQQHDAVQYXJpczEOMAwG
+    A1UECAwFUGFyaXMxFzAVBgNVBAoMDk9uZVdlYWx0aFBsYWNlMQswCQYDVQQDDAJj
+    YTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALWtERW5pLDQtEegqIOL
+    Z9Nd5KK4G2hSjV0oePVHSbg8zqRWGcWfIZCJfGzWoCQuZ3lwQtol5+P7G8MArkV2
+    qCfZry1FKZ2pyTJkzaHf866vbdacK7XI9tgJckcZi4U9OyBd5LEXtmXVDeoVLsLs
+    v3it6dE4edt9u8WUnUPBhlFBCtRs5lbZbsGg0W+yNkXK15XMKpAnc9YFQ7TZwo1S
+    jUMyc/WC2EP1HPgxJE2PLFa2C5cFOS5AOrYZANkGJH+ur9qzw4GhnaZbviNVwPjo
+    opkX6r9/TwVIXZnGwA7kv/M1hM3Lo2eo7YznaTqWjv6gzy9tcPkY34DMTcJ3Xk2N
+    taWW5d7A62tnd3FBOs/yMBjO+il2r3CWSAvJx/LKN5eoQCB+Ynol2vegVtw//CXS
+    eeaBDfw8BFNc0Rp1krIEC2+PSw4cZ4MYmDoRq/IydXEzUDcveNGI0UAAlk/k39rz
+    V6fiBB3O9KldCVGp7DERipoZoXn77FECKY2SlSNq4Dpia8mjm2iiEBaQ375KWd5v
+    lBY0Oq99/qIQLGZ8pyn1VcG6nv71dssD1BQFoYMCM77u7s8vbbJy39yDqpUa4ztQ
+    1UfGhaoSVJwAe84TFtjZyNnmTkwu8vGWbO0HNerXfMlQ+sNhYj56w9Y8aIKxEQ6a
+    g6eP9SeiIcKDPrJkjwH2G2bLAgMBAAGjYzBhMB0GA1UdDgQWBBT8UctFVuIvmlfj
+    3011hRCuiIVGUjAfBgNVHSMEGDAWgBT8UctFVuIvmlfj3011hRCuiIVGUjAPBgNV
+    HRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjANBgkqhkiG9w0BAQsFAAOCAgEA
+    Sx7d2hEYaqlXpGV5VejYApqW4jiPc1eBABZ4iOHxzmdQowuMxQ8clhA/S5vhGv3W
+    2uS9TE8RYsWcy2UdEsZdj0KFpm4bDxJVBtZ94fwPwGNDP0B7cAHNSwvZGZu3dk+X
+    wyaLcmCQoJMPnolznvTi6f2XQCo/YOwMxRUsTx1djMXV4Vt4hlxwpsDgw7D6KGyE
+    r+5mqQ/ZB556+EjznGIUleMG6V+ToeiOR2wFEuXVz2fAyw+jpzTrcKPN31ExD4LC
+    yHKosd6c2CSvhDlE29ZZ4qBV+WdJgXS2CG9boRm4UaPU838Gm1Blg4uZib9v7QVi
+    FL8tJZ8IJO0xhCZpNp1CXGyapyLQXsQrSDTFBYQHw7lb8OeF5SnxJ6uEpV53zYR3
+    1JtDTSnYT59oKrLkk4ldVI8pEJPcWJO+crzsCTVFSO+y1ahEeNWUdCz+wlrOrn2W
+    tTB+dSlVYqmPm5cB+NE7z+SdLXB9Fk/3bgUwAYBbOi5kGQFzlhUW7K3fNOYocolb
+    F2Cgj8EOBPSidYYMq4WTcBGqK3il6SBBrCfG1OI3PGV/SQM/1l7JZ/AgXYkLaeBd
+    4Nk8/3edqo8DyIrgXdp5vO7Hy1x4nwe0GTNUpgCtgY3ufOgIE+SVagHhea0Hf+WO
+    lWrt0E0GyrFcszehqtIBsua2L78UNabciOskru/E+es=
+    -----END CERTIFICATE-----
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultIntermediateCertificate
+metadata:
+  name: example-intermediate
+spec:
+  path: example_intermediate
+  root: "example"
+  generate:
+    type: internal
+    commonName: "example Intermediate CA"
+    ttl: 26280h
+    keyBits: 4096
+    excludeCnFromSans: true
+  signing:
+    commonName: "example Intermediate CA"
+    ttl: 87600h
+  roles:
+    - name: examplerole
+      keyBits: 2048
+      maxTtl: 8760h
+      allowAnyName: true
+    - name: examplerole2
+      keyBits: 2048
+      maxTtl: 8760h
+      allowAnyName: true
