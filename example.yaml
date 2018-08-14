@@ -1,0 +1,13 @@
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultPolicy
+metadata:
+  name: test-policy
+spec:
+  name: test
+  rules:
+    - path: secret/data/test
+      capabilities:
+        - read
+    - path: secret/data/huhu
+      capabilities:
+        - update
