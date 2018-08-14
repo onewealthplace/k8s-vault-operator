@@ -38,13 +38,35 @@ class KubernetesHelper {
         //
         let apiExtensions = this.kubernetesClient.apis['apiextensions.k8s.io'].v1beta1;
         try {
-            await apiExtensions.crd(crd.metadata.name).get();
-            console.log(`Found definition for ${crd.metadata.name}`)
-        } catch (_) {
             await apiExtensions.customresourcedefinitions.post({body: crd});
-            console.log(`Create: ${crd.metadata.name}`);
+            console.log(`Create: ${crd.metadata.name}`)
+        } catch (err) {
+            if (err.code !== 409) throw err;
+            console.log(`Resource already exist: ${crd.metadata.name}`);
         }
         this.kubernetesClient.addCustomResourceDefinition(crd);
+    }
+
+    async applySecret(name, namespace, content) {
+        let data = {};
+        Object.keys(content).forEach((key) => {
+            data[key] = Buffer.from(content[key]).toString('base64')
+        });
+        let payload = {body: {
+                apiVersion: "v1",
+                kind: "Secret",
+                metadata: {
+                    name,
+                    namespace
+                },
+                data
+            }};
+        try {
+            this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload)
+        }catch (err) {
+            if (err.code !== 409) throw err;
+            this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).put(payload)
+        }
     }
 }
 

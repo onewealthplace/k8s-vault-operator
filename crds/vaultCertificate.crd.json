@@ -17,47 +17,58 @@
         "properties": {
           "spec": {
             "properties": {
-              "role": {
+              "secretName": {
                 "type": "string"
               },
-              "commonName": {
+              "path": {
                 "type": "string"
               },
-              "altNames": {
-                "type": "array",
-                "items": {
-                  "type": "string"
+              "generate": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string"
+                  },
+                  "commonName": {
+                    "type": "string"
+                  },
+                  "altNames": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ipSans": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "uriSans": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "otherSans": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ttl": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "privateKeyFormat": {
+                    "type": "string"
+                  },
+                  "excludeCnDFromSans": {
+                    "type": "boolean"
+                  }
                 }
-              },
-              "ipSans": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "uriSans": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "otherSans": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "ttl": {
-                "type": "string"
-              },
-              "format": {
-                "type": "string"
-              },
-              "privateKeyFormat ": {
-                "type": "string"
-              },
-              "excludeCnDFromSans": {
-                "type": "boolean"
               }
             }
           }

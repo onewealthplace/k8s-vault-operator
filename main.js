@@ -40,9 +40,17 @@ async function main() {
         kubernetesHelper.watchCRD(
             'vault.operators.onewealthplace.com',
             'vaultcertificates',
-            (obj) => vaultHelper.applyCertificate(obj),
-            (obj) => vaultHelper.applyCertificate(obj),
-            (obj) => vaultHelper.deleteCertificate(obj)
+            (obj) => vaultHelper.applyCa(obj, (secretName, namespace, caChain, certificate, privateKey) => kubernetesHelper.applySecret(secretName, namespace, {
+                "ca.pem": caChain,
+                "cert.pem": certificate,
+                "key.pem": privateKey
+            })),
+            (obj) => vaultHelper.applyCa(obj, (secretName, namespace, caChain, certificate, privateKey) => kubernetesHelper.applySecret(secretName, namespace, {
+                "ca.pem": caChain,
+                "cert.pem": certificate,
+                "key.pem": privateKey
+            })),
+            () => console.log("Delete of certificates not supported yet")
         );
 
         kubernetesHelper.watchCRD(

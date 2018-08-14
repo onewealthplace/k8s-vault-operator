@@ -148,3 +148,14 @@ spec:
       keyBits: 2048
       maxTtl: 8760h
       allowAnyName: true
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultCertificate
+metadata:
+  name: example-cert
+spec:
+  path: example_intermediate
+  secretName: testcert
+  generate:
+    role: examplerole
+    commonName: cert.example.com

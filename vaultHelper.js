@@ -134,6 +134,25 @@ class VaultHelper {
         }
     }
 
+    applyCa(cert, onGenerated) {
+        let {secretName, generate} = cert.spec;
+        let commonName = generate.commonName;
+        return this.generateCertificate(cert, generate)
+            .then((generated) => {
+                if (generated) {
+                    let {certificate, ca_chain, private_key, serial_number} = generated.data;
+                    if (certificate) {
+                        console.log(`Certificate for ${commonName} generated`);
+                        return onGenerated(secretName, cert.metadata.namespace || "default", ca_chain.join('\n'), certificate, private_key);
+                    } else {
+                        console.log(`Unable to generate certificate for ${commonName}`)
+                    }
+                } else {
+                    console.log(`Certificate already exists for ${commonName}`)
+                }
+            });
+    }
+
     applyRoles(cert) {
         return Promise.all(cert.spec.roles.map((role) => this.generateRole(cert, role)))
     }
@@ -362,6 +381,31 @@ class VaultHelper {
         })
     }
 
+    generateCertificate(cert, generate) {
+        let {
+            role,
+            commonName,
+            altNames,
+            ipSans,
+            uriSans,
+            otherSans,
+            ttl,
+            format,
+            privateKeyFormat,
+            excludeCnFromSans
+        } = generate;
+        return this.vaultClient.write(`${cert.spec.path}/issue/${role}`, {
+            common_name: commonName,
+            alt_names: (altNames || []).join(','),
+            ip_sans: (ipSans || []).join(','),
+            uri_sans: (uriSans || []).join(','),
+            other_sans: (otherSans || []).join(','),
+            ttl,
+            format,
+            private_key_format: privateKeyFormat,
+            exclude_cn_from_sans: excludeCnFromSans
+        })
+    }
 }
 
 module.exports = VaultHelper;
