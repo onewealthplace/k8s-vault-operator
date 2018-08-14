@@ -37,20 +37,22 @@ async function main() {
             () => console.log("Delete of Secret Engine forbidden")
         );
 
+        const onCaGenerated = (secretName, namespace, caChain, certificate, privateKey) => {
+            if (certificate) {
+                return kubernetesHelper.applySecret(secretName, namespace, {
+                    "ca.pem": caChain,
+                    "cert.pem": certificate,
+                    "key.pem": privateKey
+                });
+            }
+        };
+
         kubernetesHelper.watchCRD(
             'vault.operators.onewealthplace.com',
             'vaultcertificates',
-            (obj) => vaultHelper.applyCa(obj, (secretName, namespace, caChain, certificate, privateKey) => kubernetesHelper.applySecret(secretName, namespace, {
-                "ca.pem": caChain,
-                "cert.pem": certificate,
-                "key.pem": privateKey
-            })),
-            (obj) => vaultHelper.applyCa(obj, (secretName, namespace, caChain, certificate, privateKey) => kubernetesHelper.applySecret(secretName, namespace, {
-                "ca.pem": caChain,
-                "cert.pem": certificate,
-                "key.pem": privateKey
-            })),
-            () => console.log("Delete of certificates not supported yet")
+            (obj) => vaultHelper.applyCa(obj, onCaGenerated),
+            (obj) => vaultHelper.applyCa(obj, onCaGenerated),
+            (obj) => vaultHelper.revokeCa(obj)
         );
 
         kubernetesHelper.watchCRD(

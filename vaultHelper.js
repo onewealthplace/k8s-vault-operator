@@ -134,23 +134,42 @@ class VaultHelper {
         }
     }
 
+    recordSerial(path, namespace, name, serialNumber, revoked) {
+        return this.vaultClient.write(`secret/data/serials/${path}/${namespace}/${name}`, {data: {serialNumber, revoked}})
+    }
+
     applyCa(cert, onGenerated) {
         let {secretName, generate} = cert.spec;
         let commonName = generate.commonName;
-        return this.generateCertificate(cert, generate)
-            .then((generated) => {
-                if (generated) {
-                    let {certificate, ca_chain, private_key, serial_number} = generated.data;
-                    if (certificate) {
-                        console.log(`Certificate for ${commonName} generated`);
-                        return onGenerated(secretName, cert.metadata.namespace || "default", ca_chain.join('\n'), certificate, private_key);
+        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${cert.metadata.namespace || "default"}/${cert.metadata.name}`).catch(() => {
+            return this.generateCertificate(cert, generate)
+                .then((generated) => {
+                    if (generated) {
+                        let {certificate, ca_chain, private_key, serial_number} = generated.data;
+                        if (certificate) {
+                            console.log(`Certificate for ${commonName} generated`);
+                            return this.recordSerial(cert.spec.path, cert.metadata.namespace || "default", cert.metadata.name, serial_number, false)
+                                .then(() => onGenerated(secretName, cert.metadata.namespace || "default", ca_chain.join('\n'), certificate, private_key));
+                        } else {
+                            console.log(`Unable to generate certificate for ${commonName}`)
+                        }
                     } else {
-                        console.log(`Unable to generate certificate for ${commonName}`)
+                        console.log(`Certificate already exists for ${commonName}`)
                     }
-                } else {
-                    console.log(`Certificate already exists for ${commonName}`)
-                }
-            });
+                })
+        })
+    }
+
+    revokeCa(cert) {
+        let namespace = cert.metadata.namespace || "default";
+        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`).then((serial) => {
+            if (serial.data.revoked) {
+                console.log("Certificate already revoked")
+            } else {
+                return this.vaultClient.write(`${cert.spec.path}/revoke`, {serial_number: serial.data.serialNumber})
+                    .then(() => this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial.data.serialNumber, true))
+            }
+        });
     }
 
     applyRoles(cert) {

@@ -61,12 +61,7 @@ class KubernetesHelper {
                 },
                 data
             }};
-        try {
-            this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload)
-        }catch (err) {
-            if (err.code !== 409) throw err;
-            this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).put(payload)
-        }
+        return this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload)
     }
 }
 
