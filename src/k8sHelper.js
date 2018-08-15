@@ -28,7 +28,7 @@ class KubernetesHelper {
                     await onUpdate(event.object);
                 }
             } catch (err) {
-                console.error(err)
+                console.error(`Error while processing ${event.object.metadata.namespace}/${event.object.metadata.name}`, err)
             }
         });
         jsonStream.on('end', () => {

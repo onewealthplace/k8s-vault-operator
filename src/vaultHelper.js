@@ -143,52 +143,48 @@ class VaultHelper {
 
     applyRootCa(cert) {
         let {pemBundle, generate} = cert.spec;
-        return this.vaultClient.list(`${cert.spec.path}/certs`).then((certs) => {
-            if (certs.data.keys.length === 0) {
-                if (pemBundle) {
-                    return this.vaultClient.write(`${cert.spec.path}/config/ca`, {
-                        pem_bundle: pemBundle
-                    });
-                } else if (generate) {
-                    return this.generateRootCa(cert, generate);
-                }
+        return this.vaultClient.read(`${cert.spec.path}/cert/ca`).catch((res) => {
+            if (pemBundle) {
+                return this.vaultClient.write(`${cert.spec.path}/config/ca`, {
+                    pem_bundle: pemBundle
+                });
+            } else if (generate) {
+                return this.generateRootCa(cert, generate)
             }
         });
     }
 
     applyIntermediateCa(cert) {
         let {certificate, generate} = cert.spec;
-        return this.vaultClient.list(`${cert.spec.path}/certs`).then((certs) => {
-            if (certs.data.keys.length === 0) {
-                if (certificate) {
-                    return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {
-                        certificate
-                    });
-                } else if (generate) {
-                    let commonName = generate.commonName;
-                    return this.generateIntermediateCa(cert, generate)
-                        .then((generated) => {
-                            if (generated) {
-                                let csr = generated.data.csr;
-                                if (csr) {
-                                    console.log(`Certificate for ${commonName} generated`);
-                                    return this.signIntermediate(cert, csr).then((intermediateCert) => {
-                                        let certificate = intermediateCert.data.certificate;
-                                        if (certificate) {
-                                            console.log(`Certificate for ${commonName} signed with root certificate`);
-                                            return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, { certificate })
-                                        } else {
-                                            console.log(`Unable to sign certificate for ${commonName} with root certificate`);
-                                        }
-                                    })
-                                } else {
-                                    console.log(`Unable to generate certificate for ${commonName}`)
-                                }
+        return this.vaultClient.list(`${cert.spec.path}/certs`).catch(() => {
+            if (certificate) {
+                return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {
+                    certificate
+                });
+            } else if (generate) {
+                let commonName = generate.commonName;
+                return this.generateIntermediateCa(cert, generate)
+                    .then((generated) => {
+                        if (generated) {
+                            let csr = generated.data.csr;
+                            if (csr) {
+                                console.log(`Certificate for ${commonName} generated`);
+                                return this.signIntermediate(cert, csr).then((intermediateCert) => {
+                                    let certificate = intermediateCert.data.certificate;
+                                    if (certificate) {
+                                        console.log(`Certificate for ${commonName} signed with root certificate`);
+                                        return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, { certificate })
+                                    } else {
+                                        console.log(`Unable to sign certificate for ${commonName} with root certificate`);
+                                    }
+                                })
                             } else {
-                                console.log(`Certificate already exists for ${commonName}`)
+                                console.log(`Unable to generate certificate for ${commonName}`)
                             }
-                        });
-                }
+                        } else {
+                            console.log(`Certificate already exists for ${commonName}`)
+                        }
+                    });
             }
         });
     }
@@ -241,9 +237,10 @@ class VaultHelper {
         return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
             .then((serial) => {
                 if (!serial.data.data.revoked) {
-                    return this.vaultClient.list(`/auth/${accessorPath}/certs`).then((certs) => {
-                        return this.vaultClient.read(`${cert.spec.path}/cert/${serial.data.data.serialNumber}`).then((certificate) => {
-                            return this.vaultClient.write(`/auth/${accessorPath}/certs/${namespace}-${cert.metadata.name}`, {
+                    return this.vaultClient.read(`${cert.spec.path}/cert/${serial.data.data.serialNumber}`).then((certificate) => {
+                        return this.vaultClient.list(`auth/${accessorPath}/certs`).then((certs) => {
+                            if (certs.data.keys.indexOf(`${namespace}-${cert.metadata.name}`) > -1) return Promise.resolve();
+                            return this.vaultClient.write(`auth/${accessorPath}/certs/${namespace}-${cert.metadata.name}`, {
                                 certificate: certificate.data.certificate,
                                 allowed_common_names: allowedCommonNames,
                                 allowed_dns_sans: allowedDnsSans,
@@ -257,8 +254,8 @@ class VaultHelper {
                                 period,
                                 bound_cidrs: boundCidrs
                             })
-                        })
-                    });
+                        });
+                    })
                 }
             })
     }
@@ -370,10 +367,11 @@ class VaultHelper {
             street_address: streetAddress,
             postal_code: postalCode
         }).then((generated) => {
-            if (generated.data.certificate) {
-                console.log(`Certificate for ${commonName} generated`)
+            if (generated.data && generated.data.certificate) {
+                console.log(`Certificate for ${commonName} generated`);
+                return generated.data.certificate
             } else {
-                console.log(`Unable to generate certificate for ${commonName}`)
+                throw new Error(`Unable to generate certificate for ${commonName}`)
             }
         })
     }
