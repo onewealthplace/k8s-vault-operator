@@ -12,7 +12,9 @@ class KubernetesHelper {
     }
 
 
-    watchCRD(group, kind, onCreate, onUpdate, onDelete) {
+    watchCRD(crd, onCreate, onUpdate, onDelete) {
+        const group = crd.spec.group;
+        const kind = crd.spec.names.plural;
         const stream = this.kubernetesClient.apis[group].v1.watch[kind].getStream();
         const jsonStream = new JSONStream();
         stream.pipe(jsonStream);
@@ -32,10 +34,10 @@ class KubernetesHelper {
             }
         });
         jsonStream.on('end', () => {
-            this.watchCRD(group, kind, onCreate, onUpdate, onDelete)
+            this.watchCRD(crd, onCreate, onUpdate, onDelete)
         });
         jsonStream.on('error', () => {
-            this.watchCRD(group, kind, onCreate, onUpdate, onDelete)
+            this.watchCRD(crd, onCreate, onUpdate, onDelete)
         });
     }
 

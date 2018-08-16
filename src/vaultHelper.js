@@ -13,46 +13,28 @@ class VaultHelper {
         })
     }
 
-    applyPolicy(policy) {
-        let {
-            name,
-            rules
-        } = policy.spec;
-        let rulesObject = {};
-        rules.forEach(rule => {
-            let {
-                path,
-                capabilities,
-                minWrappingTtl,
-                maxWrappingTtl,
-                allowedParameters,
-                deniedParameters,
-                requiredParameters
-            } = rule;
-            rulesObject[path] = {
-                capabilities,
-                required_parameters: requiredParameters,
-                allowed_parameters: allowedParameters,
-                denied_parameters: deniedParameters,
-                min_wrapping_ttl: minWrappingTtl,
-                max_wrapping_ttl: maxWrappingTtl
-            };
-        });
-        return this.vaultClient.addPolicy({
-            name,
-            rules: JSON.stringify({path: rulesObject}, null, 4),
-        });
-    }
-
-    deletePolicy(policy) {
-        let {name} = policy.spec;
-        return this.vaultClient.removePolicy({name})
-    }
-
-    disableAuthEngine(authEngine) {
-        return this.vaultClient.disableAuth({
-            mount_point: authEngine.spec.path
-        })
+    applyCa(cert, onGenerated) {
+        let {secretName, generate} = cert.spec;
+        let namespace = cert.metadata.namespace || "default";
+        let effectivelyGenerateCa = () => this.generateCertificate(cert, generate)
+            .then((generated) => {
+                let {certificate, ca_chain, private_key, serial_number} = generated.data;
+                if (certificate) {
+                    console.log(`Certificate for ${namespace}/${cert.metadata.name} generated`);
+                    return this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial_number, generate.commonName, false)
+                        .then(() => onGenerated(secretName, namespace, ca_chain.join('\n'), certificate, private_key));
+                } else {
+                    console.log(`Unable to generate certificate for ${namespace}/${cert.metadata.name}`)
+                }
+            });
+        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
+            .then((serial) => {
+                if (serial.data.data.revoked) {
+                    return effectivelyGenerateCa()
+                }
+            })
+            .catch(() => effectivelyGenerateCa())
+            .then(() => this.linkCaToAuth(cert))
     }
 
     applySecretEngine(secretEngine) {
@@ -76,27 +58,27 @@ class VaultHelper {
             passthroughRequestHeaders
         } = config;
         return this.vaultClient.mounts().then((mounts) => {
-           if (!mounts[`${path}/`]) {
-               return this.vaultClient.mount({
-                   mount_point: path,
-                   type,
-                   description,
-                   config: {
-                       default_lease_ttl: defaultLeaseTtl,
-                       max_lease_ttl: maxLeaseTtl,
-                       force_no_cache: forceNoCache,
-                       plugin_name: pluginName,
-                       audit_non_hmac_request_keys: (auditNonHmacRequestKeys || []).concat(','),
-                       audit_non_hmac_response_keys: (auditNonHmacResponseKeys || []).concat(','),
-                       listing_visibility: listingVisibility,
-                       passthrough_request_headers: (passthroughRequestHeaders || []).concat(',')
-                   },
-                   options,
-                   plugin_name: secretEngine.spec.pluginName,
-                   local,
-                   seal_wrap: sealWrap
-               })
-           }
+            if (!mounts[`${path}/`]) {
+                return this.vaultClient.mount({
+                    mount_point: path,
+                    type,
+                    description,
+                    config: {
+                        default_lease_ttl: defaultLeaseTtl,
+                        max_lease_ttl: maxLeaseTtl,
+                        force_no_cache: forceNoCache,
+                        plugin_name: pluginName,
+                        audit_non_hmac_request_keys: (auditNonHmacRequestKeys || []).concat(','),
+                        audit_non_hmac_response_keys: (auditNonHmacResponseKeys || []).concat(','),
+                        listing_visibility: listingVisibility,
+                        passthrough_request_headers: (passthroughRequestHeaders || []).concat(',')
+                    },
+                    options,
+                    plugin_name: secretEngine.spec.pluginName,
+                    local,
+                    seal_wrap: sealWrap
+                })
+            }
         });
     }
 
@@ -189,32 +171,93 @@ class VaultHelper {
         });
     }
 
-    recordSerial(path, namespace, name, serialNumber, commonName, revoked) {
-        return this.vaultClient.write(`secret/data/serials/${path}/${namespace}/${name}`, {data: {serialNumber, revoked, commonName}})
+    applyEntity(entity) {
+        let {
+            name,
+            metadata,
+            policies,
+            aliases
+        } = entity.spec;
+
+        return this.vaultClient.write('identity/entity', {
+            name,
+            metadata,
+            policies
+        })
+            .then(() => this.applyAliases(name, aliases))
+            .catch(() => this.applyAliases(name, aliases));
     }
 
-    applyCa(cert, onGenerated) {
-        let {secretName, generate} = cert.spec;
-        let namespace = cert.metadata.namespace || "default";
-        let effectivelyGenerateCa = () => this.generateCertificate(cert, generate)
-            .then((generated) => {
-                let {certificate, ca_chain, private_key, serial_number} = generated.data;
-                if (certificate) {
-                    console.log(`Certificate for ${namespace}/${cert.metadata.name} generated`);
-                    return this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial_number, generate.commonName, false)
-                        .then(() => onGenerated(secretName, namespace, ca_chain.join('\n'), certificate, private_key));
-                } else {
-                    console.log(`Unable to generate certificate for ${namespace}/${cert.metadata.name}`)
-                }
-            });
-        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
-            .then((serial) => {
-                if (serial.data.data.revoked) {
-                    return effectivelyGenerateCa()
-                }
-            })
-            .catch(() => effectivelyGenerateCa())
-            .then(() => this.linkCaToAuth(cert))
+    applyAliases(name, aliases) {
+        return this.vaultClient.write('identity/lookup/entity', {name}).then((entity) => {
+            return Promise.all(aliases.filter((a) =>
+                entity.data.aliases.find(aa => aa.name === a.name) === undefined
+            ).map((alias) => {
+                let {name, metadata, accessorPath} = alias;
+                return this.vaultClient.read(`sys/auth`).then((auths) => {
+                    let accessor = auths.data[`${accessorPath}/`].accessor;
+                    return this.vaultClient.write('identity/entity-alias', {
+                        name, metadata, canonical_id: entity.data.id, mount_accessor: accessor
+                    })
+                });
+            }))
+        });
+    }
+
+    applyPolicy(policy) {
+        let {
+            name,
+            rules
+        } = policy.spec;
+        let rulesObject = {};
+        rules.forEach(rule => {
+            let {
+                path,
+                capabilities,
+                minWrappingTtl,
+                maxWrappingTtl,
+                allowedParameters,
+                deniedParameters,
+                requiredParameters
+            } = rule;
+            rulesObject[path] = {
+                capabilities,
+                required_parameters: requiredParameters,
+                allowed_parameters: allowedParameters,
+                denied_parameters: deniedParameters,
+                min_wrapping_ttl: minWrappingTtl,
+                max_wrapping_ttl: maxWrappingTtl
+            };
+        });
+        return this.vaultClient.addPolicy({
+            name,
+            rules: JSON.stringify({path: rulesObject}, null, 4),
+        });
+    }
+
+    applyRoles(cert) {
+        return Promise.all(cert.spec.roles.map((role) => this.generateRole(cert, role)))
+    }
+
+    deleteEntity(entity) {
+        return this.vaultClient.write('identity/lookup/entity', {name: entity.spec.name}).then((entity) => {
+            return this.vaultClient.delete(`identity/entity/id/${entity.data.id}`)
+        });
+    }
+
+    deletePolicy(policy) {
+        let {name} = policy.spec;
+        return this.vaultClient.removePolicy({name})
+    }
+
+    disableAuthEngine(authEngine) {
+        return this.vaultClient.disableAuth({
+            mount_point: authEngine.spec.path
+        })
+    }
+
+    recordSerial(path, namespace, name, serialNumber, commonName, revoked) {
+        return this.vaultClient.write(`secret/data/serials/${path}/${namespace}/${name}`, {data: {serialNumber, revoked, commonName}})
     }
 
     linkCaToAuth(cert) {
@@ -271,10 +314,6 @@ class VaultHelper {
                     .then(() => console.log(`Certificate ${namespace}/${cert.metadata.name} revoked`))
             }
         });
-    }
-
-    applyRoles(cert) {
-        return Promise.all(cert.spec.roles.map((role) => this.generateRole(cert, role)))
     }
 
     signIntermediate(cert, csr) {

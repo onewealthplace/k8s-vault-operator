@@ -6,6 +6,7 @@ const vaultSecretEngineCrd = require("./crds/vaultSecretEngine.crd.json");
 const vaultAuthEngineCrd = require("./crds/vaultAuthEngine.crd.json");
 const vaultRootCertificateCrd = require("./crds/vaultRootCertificate.crd.json");
 const vaultIntermediateCertificateCrd = require("./crds/vaultIntermediateCertificate.crd.json");
+const vaultEntityCrd = require("./crds/vaultEntity.crd");
 
 async function main() {
     try {
@@ -22,30 +23,7 @@ async function main() {
         await kubernetesHelper.createCrd(vaultAuthEngineCrd);
         await kubernetesHelper.createCrd(vaultRootCertificateCrd);
         await kubernetesHelper.createCrd(vaultIntermediateCertificateCrd);
-
-        kubernetesHelper.watchCRD(
-            'vault.operators.onewealthplace.com',
-            'vaultpolicies',
-            (obj) => vaultHelper.applyPolicy(obj),
-            (obj) => vaultHelper.applyPolicy(obj),
-            (obj) => vaultHelper.deletePolicy(obj)
-        );
-
-        kubernetesHelper.watchCRD(
-            'vault.operators.onewealthplace.com',
-            'vaultauthengines',
-            (obj) => vaultHelper.applyAuthEngine(obj),
-            (obj) => vaultHelper.applyAuthEngine(obj),
-            (obj) => vaultHelper.disableAuthEngine(obj)
-        );
-
-        kubernetesHelper.watchCRD(
-            'vault.operators.onewealthplace.com',
-            'vaultsecretengines',
-            (obj) => vaultHelper.applySecretEngine(obj),
-            () => console.log("Update of Secret Engine forbidden"),
-            () => console.log("Delete of Secret Engine forbidden")
-        );
+        await kubernetesHelper.createCrd(vaultEntityCrd);
 
         const onCaGenerated = (secretName, namespace, caChain, certificate, privateKey) => {
             if (certificate) {
@@ -57,25 +35,43 @@ async function main() {
             }
         };
 
-        kubernetesHelper.watchCRD(
-            'vault.operators.onewealthplace.com',
-            'vaultcertificates',
+        kubernetesHelper.watchCRD(vaultPolicyCrd,
+            (obj) => vaultHelper.applyPolicy(obj),
+            (obj) => vaultHelper.applyPolicy(obj),
+            (obj) => vaultHelper.deletePolicy(obj)
+        );
+
+        kubernetesHelper.watchCRD(vaultAuthEngineCrd,
+            (obj) => vaultHelper.applyAuthEngine(obj),
+            (obj) => vaultHelper.applyAuthEngine(obj),
+            (obj) => vaultHelper.disableAuthEngine(obj)
+        );
+
+        kubernetesHelper.watchCRD(vaultSecretEngineCrd,
+            (obj) => vaultHelper.applySecretEngine(obj),
+            () => console.log("Update of Secret Engine forbidden"),
+            () => console.log("Delete of Secret Engine forbidden")
+        );
+
+        kubernetesHelper.watchCRD(vaultEntityCrd,
+            (obj) => vaultHelper.applyEntity(obj),
+            (obj) => vaultHelper.applyEntity(obj),
+            (obj) => vaultHelper.deleteEntity(obj),
+        );
+
+        kubernetesHelper.watchCRD(vaultCertificateCrd,
             (obj) => vaultHelper.applyCa(obj, onCaGenerated),
             (obj) => vaultHelper.applyCa(obj, onCaGenerated),
             (obj) => vaultHelper.revokeCa(obj)
         );
 
-        kubernetesHelper.watchCRD(
-            'vault.operators.onewealthplace.com',
-            'vaultrootcertificates',
+        kubernetesHelper.watchCRD(vaultRootCertificateCrd,
             (obj) => vaultHelper.applyRootCa(obj),
             () => console.log("Update of Root certificates forbidden"),
             () => console.log("Delete of Root certificates forbidden")
         );
 
-        kubernetesHelper.watchCRD(
-            'vault.operators.onewealthplace.com',
-            'vaultintermediatecertificates',
+        kubernetesHelper.watchCRD(vaultIntermediateCertificateCrd,
             (obj) => vaultHelper.applyIntermediateCa(obj).then(() => vaultHelper.applyRoles(obj)),
             (obj) => vaultHelper.applyRoles(obj),
             () => console.log("Delete of Intermediate certificates forbidden")
