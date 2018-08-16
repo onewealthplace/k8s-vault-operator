@@ -35,11 +35,6 @@ async function main() {
             }
         };
 
-        kubernetesHelper.watchCRD(vaultPolicyCrd,
-            (obj) => vaultHelper.applyPolicy(obj),
-            (obj) => vaultHelper.applyPolicy(obj),
-            (obj) => vaultHelper.deletePolicy(obj)
-        );
 
         kubernetesHelper.watchCRD(vaultAuthEngineCrd,
             (obj) => vaultHelper.applyAuthEngine(obj),
@@ -53,18 +48,6 @@ async function main() {
             () => console.log("Delete of Secret Engine forbidden")
         );
 
-        kubernetesHelper.watchCRD(vaultEntityCrd,
-            (obj) => vaultHelper.applyEntity(obj),
-            (obj) => vaultHelper.applyEntity(obj),
-            (obj) => vaultHelper.deleteEntity(obj),
-        );
-
-        kubernetesHelper.watchCRD(vaultCertificateCrd,
-            (obj) => vaultHelper.applyCa(obj, onCaGenerated),
-            (obj) => vaultHelper.applyCa(obj, onCaGenerated),
-            (obj) => vaultHelper.revokeCa(obj)
-        );
-
         kubernetesHelper.watchCRD(vaultRootCertificateCrd,
             (obj) => vaultHelper.applyRootCa(obj),
             () => console.log("Update of Root certificates forbidden"),
@@ -76,6 +59,24 @@ async function main() {
             (obj) => vaultHelper.applyRoles(obj),
             () => console.log("Delete of Intermediate certificates forbidden")
         );
+
+        kubernetesHelper.watchCRD(vaultCertificateCrd,
+            (obj) => vaultHelper.applyCa(obj, onCaGenerated),
+            (obj) => vaultHelper.applyCa(obj, onCaGenerated),
+            (obj) => vaultHelper.revokeCa(obj)
+        );
+
+        kubernetesHelper.watchCRD(vaultPolicyCrd,
+            (obj) => vaultHelper.applyPolicy(obj),
+            (obj) => vaultHelper.applyPolicy(obj),
+            (obj) => vaultHelper.deletePolicy(obj)
+        );
+        kubernetesHelper.watchCRD(vaultEntityCrd,
+            (obj) => vaultHelper.applyEntity(obj),
+            (obj) => vaultHelper.applyEntity(obj),
+            (obj) => vaultHelper.deleteEntity(obj),
+        );
+
 
     } catch (err) {
         console.error('Error: ', err);
