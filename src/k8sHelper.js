@@ -76,6 +76,10 @@ class KubernetesHelper {
             return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).patch(payload)
         }
     }
+
+    async getSecret(namespace, name) {
+        return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).get();
+    }
 }
 
 module.exports = KubernetesHelper;

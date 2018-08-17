@@ -35,6 +35,14 @@ async function main() {
             }
         };
 
+        const fetchSecret = (namespace, secretName) => {
+            return kubernetesHelper.getSecret(namespace, secretName).then((secret) => {
+                let certificate = Buffer.from(secret.body.data["cert.pem"], 'base64').toString('ascii');
+                let key = Buffer.from(secret.body.data["key.pem"], 'base64').toString('ascii');
+                return {certificate, key};
+            })
+        };
+
 
         kubernetesHelper.watchCRD(vaultAuthEngineCrd,
             (obj) => vaultHelper.applyAuthEngine(obj),
@@ -49,7 +57,7 @@ async function main() {
         );
 
         kubernetesHelper.watchCRD(vaultRootCertificateCrd,
-            (obj) => vaultHelper.applyRootCa(obj),
+            (obj) => vaultHelper.applyRootCa(obj, fetchSecret),
             () => console.log("Update of Root certificates forbidden"),
             () => console.log("Delete of Root certificates forbidden")
         );

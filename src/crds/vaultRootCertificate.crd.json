@@ -21,7 +21,12 @@
                 "type": "string"
               },
               "pemBundle": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "secretName": {
+                    "type": "string"
+                  }
+                }
               },
               "generate": {
                 "type": "object",

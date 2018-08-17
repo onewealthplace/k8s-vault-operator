@@ -28,7 +28,7 @@ class VaultHelper {
         const secretEngineGenerator = new SecretEngineGenerator(this.vaultClient);
         const authEngineGenerator = new AuthEngineGenerator(this.vaultClient);
 
-        this.applyRootCa = (r) => rootCaGenerator.apply(r);
+        this.applyRootCa = (r, fetchSecret) => rootCaGenerator.apply(r, fetchSecret);
         this.applyIntermediateCa = (r) => intermediateCaGenerator.apply(r);
         this.applyCa = (r, cb) => certificateGenerator.apply(r, cb);
         this.applyRoles = (r) => roleGenerator.apply(r);

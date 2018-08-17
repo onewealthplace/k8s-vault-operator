@@ -4,12 +4,14 @@ class RootCaGenerator {
         this.vaultClient = vaultClient;
     }
 
-    apply(resource) {
+    apply(resource, fetchSecret) {
         let {pemBundle, generate} = resource.spec;
         return this.vaultClient.read(`${resource.spec.path}/cert/ca`).catch((res) => {
             if (pemBundle) {
-                return this.vaultClient.write(`${resource.spec.path}/config/ca`, {
-                    pem_bundle: pemBundle
+                return fetchSecret(resource.metadata.namespace || "default", pemBundle.secretName).then(({certificate, key}) => {
+                    return this.vaultClient.write(`${resource.spec.path}/config/ca`, {
+                        pem_bundle: `${key}\n${certificate}`
+                    });
                 });
             } else if (generate) {
                 return this.generateRootCa(resource, generate)
