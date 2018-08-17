@@ -23,6 +23,9 @@
               "path": {
                 "type": "string"
               },
+              "root": {
+                "type": "string"
+              },
               "auth": {
                 "type": "object",
                 "properties": {

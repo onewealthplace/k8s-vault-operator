@@ -11,8 +11,10 @@ class CertificateGenerator {
                 let {certificate, issuing_ca, private_key, serial_number} = generated.data;
                 if (certificate) {
                     console.log(`Certificate for ${namespace}/${cert.metadata.name} generated`);
-                    return this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial_number, generate.commonName, false)
-                        .then(() => onGenerated(secretName, namespace, issuing_ca, certificate, private_key));
+                    return this.vaultClient.read(`${cert.spec.root}/ca/pem`).then((rootCa) => {
+                        return this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial_number, generate.commonName, false)
+                            .then(() => onGenerated(secretName, namespace, `${rootCa}\n${issuing_ca}`, certificate, private_key));
+                    });
                 } else {
                     console.log(`Unable to generate certificate for ${namespace}/${cert.metadata.name}`)
                 }
