@@ -71,14 +71,14 @@ class KubernetesHelper {
                 data
             }};
         try {
-            return await this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload)
+            return await this.kubernetesClient.api.v1.namespaces(namespace).secrets.post(payload).then(() => console.log(`Secret ${namespace}/${name} created`))
         } catch (_) {
-            return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).patch(payload)
+            return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).patch(payload).then(() => console.log(`Secret ${namespace}/${name} patched`))
         }
     }
 
     async deleteSecret(name, namespace) {
-        return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).delete()
+        return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).delete().then(() => console.log(`Secret ${namespace}/${name} deleted`))
     }
 
     async getSecret(namespace, name) {

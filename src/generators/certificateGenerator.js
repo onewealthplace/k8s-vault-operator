@@ -57,7 +57,7 @@ class CertificateGenerator {
             accessorPath
         } = cert.spec.auth;
         let namespace = cert.metadata.namespace || "default";
-        return this.vaultClient.delete(`auth/${accessorPath}/certs/${namespace}-${cert.metadata.name}`)
+        return this.vaultClient.delete(`auth/${accessorPath}/certs/${namespace}-${cert.metadata.name}`).then(() => console.log(`Certificate ${namespace}/${cert.metadata.name} unlinked`))
     }
 
     linkCaToAuth(cert) {
