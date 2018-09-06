@@ -25,12 +25,16 @@ class CertificateGenerator {
                     return effectivelyGenerateCa()
                 }
             })
-            .catch(() => effectivelyGenerateCa())
+            .catch((err) => {
+                console.log(err);
+                effectivelyGenerateCa()
+            })
             .then(() => this.linkCaToAuth(cert))
     }
 
-    revoke(cert) {
+    revoke(cert, onRevoked) {
         let namespace = cert.metadata.namespace || "default";
+        let {secretName} = cert.spec;
         return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`).then((serial) => {
             if (serial.data.data.revoked) {
                 console.log("Certificate already revoked")
@@ -38,12 +42,22 @@ class CertificateGenerator {
                 return this.vaultClient.write(`${cert.spec.path}/revoke`, {serial_number: serial.data.data.serialNumber})
                     .then(() => this.recordSerial(cert.spec.path, namespace, cert.metadata.name, serial.data.data.serialNumber, serial.data.data.commonName, true))
                     .then(() => console.log(`Certificate ${namespace}/${cert.metadata.name} revoked`))
+                    .then(() => this.unlinkCaToAuth(cert))
+                    .then(() => onRevoked(secretName, namespace))
             }
         });
     }
 
     recordSerial(path, namespace, name, serialNumber, commonName, revoked) {
         return this.vaultClient.write(`secret/data/serials/${path}/${namespace}/${name}`, {data: {serialNumber, revoked, commonName}})
+    }
+
+    unlinkCaToAuth(cert) {
+        let {
+            accessorPath
+        } = cert.spec.auth;
+        let namespace = cert.metadata.namespace || "default";
+        return this.vaultClient.delete(`auth/${accessorPath}/certs/${namespace}-${cert.metadata.name}`)
     }
 
     linkCaToAuth(cert) {

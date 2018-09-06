@@ -77,6 +77,10 @@ class KubernetesHelper {
         }
     }
 
+    async deleteSecret(name, namespace) {
+        return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).delete()
+    }
+
     async getSecret(namespace, name) {
         return await this.kubernetesClient.api.v1.namespaces(namespace).secrets(name).get();
     }

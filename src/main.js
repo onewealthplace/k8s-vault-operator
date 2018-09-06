@@ -35,6 +35,10 @@ async function main() {
             }
         };
 
+        const onCaRevoked = (secretName, namespace) => {
+            return kubernetesHelper.deleteSecret(secretName, namespace);
+        };
+
         const fetchSecret = (namespace, secretName) => {
             return kubernetesHelper.getSecret(namespace, secretName).then((secret) => {
                 let certificate = Buffer.from(secret.body.data["cert.pem"], 'base64').toString('ascii');
@@ -71,7 +75,7 @@ async function main() {
         kubernetesHelper.watchCRD(vaultCertificateCrd,
             (obj) => vaultHelper.applyCa(obj, onCaGenerated),
             (obj) => vaultHelper.applyCa(obj, onCaGenerated),
-            (obj) => vaultHelper.revokeCa(obj)
+            (obj) => vaultHelper.revokeCa(obj, onCaRevoked)
         );
 
         kubernetesHelper.watchCRD(vaultPolicyCrd,
