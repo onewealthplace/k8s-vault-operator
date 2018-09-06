@@ -36,7 +36,7 @@ class VaultHelper {
         this.applyAuthEngine = (r) => authEngineGenerator.apply(r);
         this.applySecretEngine = (r) => secretEngineGenerator.apply(r);
         this.applyEntity = (r) => entityGenerator.apply(r);
-        this.revokeCa = (r) => certificateGenerator.revoke(r);
+        this.revokeCa = (r, cb) => certificateGenerator.revoke(r, cb);
         this.disableAuthEngine = (r) => authEngineGenerator.disable(r);
         this.deletePolicy = (r) => policyGenerator.delete(r);
         this.deleteEntity = (r) => entityGenerator.delete(r);
