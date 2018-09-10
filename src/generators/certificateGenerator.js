@@ -22,14 +22,15 @@ class CertificateGenerator {
         return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
             .then((serial) => {
                 if (serial.data.data.revoked) {
-                    return effectivelyGenerateCa()
+                    return effectivelyGenerateCa().then(() => this.linkCaToAuth(cert))
                 }
             })
             .catch((err) => {
                 console.log(err);
-                effectivelyGenerateCa()
+                if (err.response && err.response.statusCode === 404) {
+                    return effectivelyGenerateCa().then(() => this.linkCaToAuth(cert))
+                }
             })
-            .then(() => this.linkCaToAuth(cert))
     }
 
     revoke(cert, onRevoked) {

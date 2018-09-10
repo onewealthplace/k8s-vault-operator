@@ -5,35 +5,37 @@ class IntermediateCaGenerator {
 
     apply(cert) {
         let {certificate, generate} = cert.spec;
-        return this.vaultClient.list(`${cert.spec.path}/certs`).catch(() => {
-            if (certificate) {
-                return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {
-                    certificate
-                });
-            } else if (generate) {
-                let commonName = generate.commonName;
-                return this.generateIntermediateCa(cert, generate)
-                    .then((generated) => {
-                        if (generated) {
-                            let csr = generated.data.csr;
-                            if (csr) {
-                                console.log(`Certificate for ${commonName} generated`);
-                                return this.signIntermediate(cert, csr).then((intermediateCert) => {
-                                    let certificate = intermediateCert.data.certificate;
-                                    if (certificate) {
-                                        console.log(`Certificate for ${commonName} signed with root certificate`);
-                                        return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, { certificate })
-                                    } else {
-                                        console.log(`Unable to sign certificate for ${commonName} with root certificate`);
-                                    }
-                                })
-                            } else {
-                                console.log(`Unable to generate certificate for ${commonName}`)
-                            }
-                        } else {
-                            console.log(`Certificate already exists for ${commonName}`)
-                        }
+        return this.vaultClient.list(`${cert.spec.path}/certs`).catch((err) => {
+            if (err.response && err.response.statusCode === 404) {
+                if (certificate) {
+                    return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {
+                        certificate
                     });
+                } else if (generate) {
+                    let commonName = generate.commonName;
+                    return this.generateIntermediateCa(cert, generate)
+                        .then((generated) => {
+                            if (generated) {
+                                let csr = generated.data.csr;
+                                if (csr) {
+                                    console.log(`Certificate for ${commonName} generated`);
+                                    return this.signIntermediate(cert, csr).then((intermediateCert) => {
+                                        let certificate = intermediateCert.data.certificate;
+                                        if (certificate) {
+                                            console.log(`Certificate for ${commonName} signed with root certificate`);
+                                            return this.vaultClient.write(`${cert.spec.path}/intermediate/set-signed`, {certificate})
+                                        } else {
+                                            console.log(`Unable to sign certificate for ${commonName} with root certificate`);
+                                        }
+                                    })
+                                } else {
+                                    console.log(`Unable to generate certificate for ${commonName}`)
+                                }
+                            } else {
+                                console.log(`Certificate already exists for ${commonName}`)
+                            }
+                        });
+                }
             }
         });
     }

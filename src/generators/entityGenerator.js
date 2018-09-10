@@ -18,7 +18,11 @@ class EntityGenerator {
             policies
         })
             .then(() => this.applyAliases(name, aliases))
-            .catch(() => this.applyAliases(name, aliases));
+            .catch((err) => {
+                if (err.response && err.response.statusCode === 404) {
+                    return this.applyAliases(name, aliases)
+                }
+            });
     }
 
     applyAliases(name, aliases) {
