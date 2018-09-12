@@ -23,8 +23,13 @@
               "pemBundle": {
                 "type": "object",
                 "properties": {
-                  "secretName": {
-                    "type": "string"
+                  "secretRef": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    }
                   }
                 }
               },

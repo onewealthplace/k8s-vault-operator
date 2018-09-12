@@ -9,7 +9,7 @@ class RootCaGenerator {
         return this.vaultClient.read(`${resource.spec.path}/cert/ca`).catch((err) => {
             if (err.response && err.response.statusCode === 404) {
                 if (pemBundle) {
-                    return fetchSecret(resource.metadata.namespace || "default", pemBundle.secretName).then(({certificate, key}) => {
+                    return fetchSecret(resource.metadata.namespace || "default", pemBundle.secretRef.name).then(({certificate, key}) => {
                         return this.vaultClient.write(`${resource.spec.path}/config/ca`, {
                             pem_bundle: `${key}\n${certificate}`
                         });
