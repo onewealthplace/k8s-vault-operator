@@ -50,7 +50,7 @@ class CertificateGenerator {
                         let parseCert = x509.parseCert(certificate.data.certificate);
                         if (parseCert.notAfter.getTime() < new Date().getTime()) {
                             console.log(`Found expired certificate for ${cert.metadata.name} in namespace ${namespace}`);
-                            return this.revoke(cert, onRevoked).then(() => this.effectivelyGenerateCa(cert, onGenerated))
+                            return this.revoke(cert, onRevoked)
                         }
                     })
                 }
