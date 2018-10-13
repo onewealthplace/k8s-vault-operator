@@ -443,6 +443,10 @@ mustache@^2.2.1:
   version "2.3.1"
   resolved "https://nexus.1wplace.com/repository/npm/mustache/-/mustache-2.3.1.tgz#ef5db3c0d11f1640e9baa47f4e65ba0c3fcd82b9"
 
+nan@2.2.0:
+  version "2.2.0"
+  resolved "https://nexus.1wplace.com/repository/npm/nan/-/nan-2.2.0.tgz#779c07135629503cf6a7b7e6aab33049b3c3853c"
+
 node-forge@^0.7.1:
   version "0.7.5"
   resolved "https://nexus.1wplace.com/repository/npm/node-forge/-/node-forge-0.7.5.tgz#6c152c345ce11c52f465c2abd957e8639cd674df"
@@ -740,6 +744,12 @@ verror@1.10.0:
     assert-plus "^1.0.0"
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
+
+x509@^0.3.3:
+  version "0.3.3"
+  resolved "https://nexus.1wplace.com/repository/npm/x509/-/x509-0.3.3.tgz#6744af599906327fe444d5103b5b2cafdbe1a776"
+  dependencies:
+    nan "2.2.0"
 
 yallist@^2.1.2:
   version "2.1.2"

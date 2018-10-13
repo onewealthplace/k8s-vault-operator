@@ -11,6 +11,15 @@ class KubernetesHelper {
         })
     }
 
+    listCRD(crd) {
+        const group = crd.spec.group;
+        return this.kubernetesClient.apis.v1.namespaces.get().then(({body: {items}}) => {
+            return Promise.all(items.map(namespace => this.kubernetesClient.apis[group].v1.namespaces(namespace.metadata.name).vaultcertificates.get()))
+        }).then((crds) => {
+            return crds.map(crd => crd.body.items).reduce((acc, curr) => acc.concat(curr), [])
+        });
+    }
+
 
     watchCRD(crd, onCreate, onUpdate, onDelete) {
         const group = crd.spec.group;

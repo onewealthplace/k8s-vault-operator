@@ -1,12 +1,14 @@
+const x509 = require('x509');
+
 class CertificateGenerator {
     constructor(vaultClient) {
         this.vaultClient = vaultClient;
     }
 
-    apply(cert, onGenerated) {
+    effectivelyGenerateCa(cert, onGenerated) {
         let {secretName, generate} = cert.spec;
         let namespace = cert.metadata.namespace || "default";
-        let effectivelyGenerateCa = () => this.generateCertificate(cert, generate)
+        return this.generateCertificate(cert, generate)
             .then((generated) => {
                 let {certificate, issuing_ca, private_key, serial_number} = generated.data;
                 if (certificate) {
@@ -19,16 +21,38 @@ class CertificateGenerator {
                     console.log(`Unable to generate certificate for ${namespace}/${cert.metadata.name}`)
                 }
             });
+    }
+
+    apply(cert, onGenerated) {
+        let namespace = cert.metadata.namespace || "default";
         return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
             .then((serial) => {
                 if (serial.data.data.revoked) {
-                    return effectivelyGenerateCa().then(() => this.linkCaToAuth(cert))
+                    return this.effectivelyGenerateCa(cert, onGenerated).then(() => this.linkCaToAuth(cert))
                 }
             })
             .catch((err) => {
                 console.log(err);
                 if (err.response && err.response.statusCode === 404) {
-                    return effectivelyGenerateCa().then(() => this.linkCaToAuth(cert))
+                    return this.effectivelyGenerateCa(cert, onGenerated).then(() => this.linkCaToAuth(cert))
+                }
+            })
+    }
+
+    checkValidity(cert, onGenerated, onRevoked) {
+        let namespace = cert.metadata.namespace || "default";
+        return this.vaultClient.read(`secret/data/serials/${cert.spec.path}/${namespace}/${cert.metadata.name}`)
+            .then((serial) => {
+                if (serial.data.data.revoked) {
+                    return this.effectivelyGenerateCa(cert, onGenerated).then(() => this.linkCaToAuth(cert))
+                } else {
+                    return this.vaultClient.read(`${cert.spec.path}/cert/${serial.data.data.serialNumber}`).then((certificate) => {
+                        let parseCert = x509.parseCert(certificate.data.certificate);
+                        if (parseCert.notAfter.getTime() < new Date().getTime()) {
+                            console.log(`Found expired certificate for ${cert.metadata.name} in namespace ${namespace}`);
+                            return this.revoke(cert, onRevoked).then(() => this.effectivelyGenerateCa(cert, onGenerated))
+                        }
+                    })
                 }
             })
     }

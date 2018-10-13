@@ -40,6 +40,7 @@ class VaultHelper {
         this.disableAuthEngine = (r) => authEngineGenerator.disable(r);
         this.deletePolicy = (r) => policyGenerator.delete(r);
         this.deleteEntity = (r) => entityGenerator.delete(r);
+        this.checkCertificateValidity =  (cert, onG, onR) => certificateGenerator.checkValidity(cert, onG, onR)
     }
 }
 

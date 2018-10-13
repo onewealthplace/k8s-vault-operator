@@ -9,6 +9,17 @@ const vaultIntermediateCertificateCrd = require("./crds/vaultIntermediateCertifi
 const vaultEntityCrd = require("./crds/vaultEntity.crd");
 
 async function main() {
+    function checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked) {
+        setTimeout(() => {
+            console.log("Checking for expired certificates");
+            kubernetesHelper.listCRD(vaultCertificateCrd).then((crds) => {
+                return Promise.all(crds.map(crd => vaultHelper.checkCertificateValidity(crd, onCaGenerated, onCaRevoked)))
+            })
+                .then(() => checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked))
+                .catch(() => checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked))
+        }, 60000);
+    }
+
     try {
         if (!process.env.VAULT_TOKEN || !process.env.VAULT_HOST || !process.env.VAULT_PORT || !process.env.VAULT_TLS_CA) {
             console.error("Please check that VAULT_HOST & VAULT_PORT & VAULT_TOKEN & VAULT_TLS_CA env vars are set correctly");
@@ -89,6 +100,7 @@ async function main() {
             (obj) => vaultHelper.deleteEntity(obj),
         );
 
+        checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked);
 
     } catch (err) {
         console.error('Error: ', err);
