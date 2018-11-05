@@ -49,8 +49,10 @@ class CertificateGenerator {
                     return this.vaultClient.read(`${cert.spec.path}/cert/${serial.data.data.serialNumber}`).then((certificate) => {
                         let parseCert = x509.parseCert(certificate.data.certificate);
                         if (parseCert.notAfter.getTime() < new Date().getTime()) {
-                            console.log(`Found expired certificate for ${cert.metadata.name} in namespace ${namespace}`);
+                            console.log(`Found expired certificate for ${cert.spec.path}/${namespace}/${cert.metadata.name} with serial ${serial.data.data.serialNumber} expired since ${parseCert.notAfter}`);
                             return this.revoke(cert, onRevoked)
+                        } else {
+                            console.log(`Certificate for ${cert.spec.path}/${namespace}/${cert.metadata.name} with serial ${serial.data.data.serialNumber} valid until ${parseCert.notAfter}`);
                         }
                     })
                 }

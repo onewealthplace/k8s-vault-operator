@@ -7,13 +7,14 @@ const vaultAuthEngineCrd = require("./crds/vaultAuthEngine.crd.json");
 const vaultRootCertificateCrd = require("./crds/vaultRootCertificate.crd.json");
 const vaultIntermediateCertificateCrd = require("./crds/vaultIntermediateCertificate.crd.json");
 const vaultEntityCrd = require("./crds/vaultEntity.crd");
+const Promise = require("bluebird");
 
 async function main() {
     function checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked) {
         setTimeout(() => {
             console.log("Checking for expired certificates");
             kubernetesHelper.listCRD(vaultCertificateCrd).then((crds) => {
-                return Promise.all(crds.map(crd => vaultHelper.checkCertificateValidity(crd, onCaGenerated, onCaRevoked)))
+                return Promise.map(crds.map(crd => vaultHelper.checkCertificateValidity(crd, onCaGenerated, onCaRevoked)), {concurrency: 1})
             })
                 .then(() => checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked))
                 .catch(() => checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked))
