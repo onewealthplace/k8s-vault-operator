@@ -23,8 +23,8 @@ async function main() {
     }
 
     try {
-        if (!process.env.VAULT_TOKEN || !process.env.VAULT_URI) {
-            console.error("Please check that VAULT_URI & VAULT_TOKEN env vars are set correctly");
+        if (!process.env.VAULT_TOKEN || !process.env.VAULT_ADDR) {
+            console.error("Please check that VAULT_ADDR & VAULT_TOKEN env vars are set correctly");
             process.exit(1);
         }
         const kubernetesHelper = new K8SHelper();
