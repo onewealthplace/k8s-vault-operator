@@ -108,3 +108,13 @@ spec:
       accessorPath: cert
       metadata:
         test: huhu
+---
+apiVersion: vault.operators.onewealthplace.com/v1
+kind: VaultSecret
+metadata:
+  name: example-secret
+spec:
+  path: toto/huhu
+  content:
+    value: |
+      Hello this is a cool secret

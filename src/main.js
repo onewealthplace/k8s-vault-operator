@@ -7,6 +7,7 @@ const vaultAuthEngineCrd = require("./crds/vaultAuthEngine.crd.json");
 const vaultRootCertificateCrd = require("./crds/vaultRootCertificate.crd.json");
 const vaultIntermediateCertificateCrd = require("./crds/vaultIntermediateCertificate.crd.json");
 const vaultEntityCrd = require("./crds/vaultEntity.crd");
+const vaultSecretCrd = require("./crds/vaultSecret.crd");
 const Promise = require("bluebird");
 
 async function main() {
@@ -22,8 +23,8 @@ async function main() {
     }
 
     try {
-        if (!process.env.VAULT_TOKEN || !process.env.VAULT_HOST || !process.env.VAULT_PORT || !process.env.VAULT_TLS_CA) {
-            console.error("Please check that VAULT_HOST & VAULT_PORT & VAULT_TOKEN & VAULT_TLS_CA env vars are set correctly");
+        if (!process.env.VAULT_TOKEN || !process.env.VAULT_URI) {
+            console.error("Please check that VAULT_URI & VAULT_TOKEN env vars are set correctly");
             process.exit(1);
         }
         const kubernetesHelper = new K8SHelper();
@@ -36,6 +37,7 @@ async function main() {
         await kubernetesHelper.createCrd(vaultRootCertificateCrd);
         await kubernetesHelper.createCrd(vaultIntermediateCertificateCrd);
         await kubernetesHelper.createCrd(vaultEntityCrd);
+        await kubernetesHelper.createCrd(vaultSecretCrd);
 
         const onCaGenerated = (secretName, namespace, caChain, certificate, privateKey) => {
             if (certificate) {
@@ -99,6 +101,11 @@ async function main() {
             (obj) => vaultHelper.applyEntity(obj),
             (obj) => vaultHelper.applyEntity(obj),
             (obj) => vaultHelper.deleteEntity(obj),
+        );
+        kubernetesHelper.watchCRD(vaultSecretCrd,
+            (obj) => vaultHelper.applySecret(obj),
+            (obj) => vaultHelper.applySecret(obj),
+            (obj) => vaultHelper.deleteSecret(obj),
         );
 
         checkCertificatesValidity(kubernetesHelper, vaultHelper, onCaGenerated, onCaRevoked);
