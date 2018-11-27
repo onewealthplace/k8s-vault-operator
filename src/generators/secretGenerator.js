@@ -10,9 +10,7 @@ class SecretGenerator {
             content
         } = entity.spec;
 
-        return this.vaultClient.write(`secret/data/${path}`, {
-            data: content
-        }).then(() => console.log(`Secret ${entity.metadata.name} applied`));
+        return this.vaultClient.write(`secret/data/${path}`, content).then(() => console.log(`Secret ${entity.metadata.name} applied`));
     }
 
     delete(entity) {
